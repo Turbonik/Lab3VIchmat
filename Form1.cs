@@ -16,6 +16,10 @@ namespace Lab3VIchmat
     {
         private double[] xValues;
         private double[] yValues;
+        PointF[] points;
+        double rangeX, minX, maxX, step;
+        int points_amount = 100;
+
         public Form1()
         {
             InitializeComponent();
@@ -32,27 +36,7 @@ namespace Lab3VIchmat
             try
             {
               
-                xValues = xTextBox.Text.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Select(double.Parse).ToArray();
-                yValues = yTextBox.Text.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Select(double.Parse).ToArray();
-
-                if (xValues.Length != yValues.Length)
-                {
-                    MessageBox.Show("Количество значений x и y должно совпадать.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                double minX = xValues.Min();
-                double maxX = xValues.Max();
-
-                double rangeX = maxX - minX;
-                minX -= rangeX * 0.05; 
-                maxX += rangeX * 0.05;
-
-                int points_amount = 100;
-         
-                double step = (maxX - minX) / points_amount; 
-
-                PointF[] points = new PointF[points_amount + 1];
+               
                 for (int i = 0; i <= points_amount; i++)
                 {
                     double x = minX + i * step;
@@ -64,16 +48,13 @@ namespace Lab3VIchmat
                 Graph.Series[1].Points.Clear();
                 Graph.Series[1].Points.DataBind(points, "X", "Y", "");
 
-                // Рисуем исходные точки
+  
                 Graph.Series[0].Points.Clear();
                 for (int i = 0; i < xValues.Length; i++)
                 {
                         Graph.Series[0].Points.AddXY(xValues[i], yValues[i]);
                 }
 
-                Graph.ChartAreas[0].AxisX.Minimum = minX;
-                Graph.ChartAreas[0].AxisX.Maximum = maxX; 
-                Graph.ChartAreas[0].AxisX.LabelStyle.Angle = 0;
 
             }
             catch (Exception ex)
@@ -105,8 +86,41 @@ namespace Lab3VIchmat
 
         private void Save_Button_Click(object sender, EventArgs e)
         {
+            try
+            {
 
+                xValues = xTextBox.Text.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Select(double.Parse).ToArray();
+                yValues = yTextBox.Text.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Select(double.Parse).ToArray();
+
+                if (xValues.Length != yValues.Length)
+                {
+                    MessageBox.Show("Количество значений x и y должно совпадать.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                minX = xValues.Min();
+                maxX = xValues.Max();
+
+                rangeX = maxX - minX;
+                minX -= rangeX * 0.05;
+                maxX += rangeX * 0.05;
+
+
+
+                step = (maxX - minX) / points_amount;
+
+                points = new PointF[points_amount + 1];
+
+                Graph.ChartAreas[0].AxisX.Minimum = minX;
+                Graph.ChartAreas[0].AxisX.Maximum = maxX;
+                Graph.ChartAreas[0].AxisX.LabelStyle.Angle = 0;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
+
 
         private void Neuton_Click(object sender, EventArgs e)
         {
