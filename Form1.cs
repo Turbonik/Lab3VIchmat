@@ -112,8 +112,9 @@ namespace Lab3VIchmat
                 MessageBox.Show("Необходимо создать хотя бы 4 серии на графике: Исходные данные, 1-я степень, 2-я степень, 3-я степень.");
                 return; 
             }
+           
 
-          
+
             chart1.Series[0].Points.Clear();
             for (int i = 0; i < xValues.Length; i++)
             {
@@ -134,8 +135,13 @@ namespace Lab3VIchmat
             {
                 selectedDegree = 3;
             }
-
-          
+            string coefs = "";
+            float[] coef = MinSquares.LeastSquaresPolynomial(xValues, yValues, selectedDegree);
+            for (int i = 0; i < coef.Length; i++)
+            {
+                coefs += coef[i].ToString() + "  ";
+            }
+            text.Text = coefs;
             if (selectedDegree > 0)
             {
                 chart1.Series[selectedDegree].Points.Clear();
