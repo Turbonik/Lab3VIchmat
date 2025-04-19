@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.Windows.Forms.DataVisualization.Charting;
 using System.Xml.Linq;
 
@@ -19,11 +19,25 @@ namespace Lab3VIchmat
         private double[] yValues;
         PointF[] points;
         double rangeX, minX, maxX, step;
-        int points_amount = 100;
+        int points_amount = 1000;
+        private const double scaleStep = 0.01; // Шаг для кусочно-линейной аппроксимации
 
         public Form1()
         {
             InitializeComponent();
+            this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
+            Graph.Series["Многочлен 4 степени"].Color = Color.Red;
+            Graph.Series["Интерполяция Лагранжа"].Color = Color.Green;
+            Graph.Series["Исходные точки"].Color = Color.Black;
+            Graph.Series["Сглаживание 2 степени"].Color = Color.Purple;
+            Graph.Series["Сглаживание 3 степени"].Color = Color.Black;
+            Graph.Series["Сглаживание 3 степени"].BorderWidth = 1;
+            Graph.Series["Сглаживание 2 степени"].BorderWidth = 1;
+            Graph.Series["Сглаживание 1 степени"].BorderWidth = 3;
+            Graph.Series["Многочлен 4 степени"].BorderWidth = 2;
+            Graph.Series["Интерполяция Лагранжа"].BorderWidth = 10;
+            Graph.Series["Интерполяция Ньютона"].BorderWidth = 4;
+
         }
 
         //Аргументы и значения варианта:
@@ -34,34 +48,30 @@ namespace Lab3VIchmat
         {
             try
             {
+                // Очищаем только текущую серию, если она уже была построена
+                clear_series(Graph.Series["Интерполяция Лагранжа"]);
+                string seriesName = "Интерполяция Лагранжа";
 
-
-                for (int i = 0; i <= points_amount; i++)
+                double currentX = minX;
+                while (currentX <= maxX)
                 {
-                    double x = minX + i * step;
-                    double y = Interpolations.Interpolate_Lagranshz(xValues, yValues, x);
-                    points[i] = new PointF((float)x, (float)y);
+                    double y = Interpolations.Interpolate_Lagranshz(xValues, yValues, currentX);
+                    Graph.Series[seriesName].Points.AddXY(currentX, y);
+                    currentX += scaleStep;
                 }
 
 
-                Graph.Series[1].Points.Clear();
-                Graph.Series[1].Points.DataBind(points, "X", "Y", "");
-
-
-                Graph.Series[0].Points.Clear();
+                // Отображаем исходные точки
+                Graph.Series["Исходные точки"].Points.Clear();
                 for (int i = 0; i < xValues.Length; i++)
                 {
-                    Graph.Series[0].Points.AddXY(xValues[i], yValues[i]);
+                    Graph.Series["Исходные точки"].Points.AddXY(xValues[i], yValues[i]);
                 }
-
-
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            Array.Clear(points, 0, points.Length);
-
         }
 
 
@@ -70,104 +80,166 @@ namespace Lab3VIchmat
         {
             try
             {
+                // Очищаем только текущую серию, если она уже была построена
+                clear_series(Graph.Series["Интерполяция Ньютона"]);
+                string seriesName = "Интерполяция Ньютона";
 
-
-                for (int i = 0; i <= points_amount; i++)
+                double currentX = minX;
+                while (currentX <= maxX)
                 {
-                    double x = minX + i * step;
-                    double y = Interpolations.Interpolate_Neuton(xValues, yValues, x);
-                    points[i] = new PointF((float)x, (float)y);
+                    double y = Interpolations.Interpolate_Neuton(xValues, yValues, currentX);
+                    Graph.Series[seriesName].Points.AddXY(currentX, y);
+                    currentX += scaleStep;
                 }
 
-
-                Graph.Series[1].Points.Clear();
-                Graph.Series[1].Points.DataBind(points, "X", "Y", "");
-
-
-                Graph.Series[0].Points.Clear();
+                // Отображаем исходные точки
+                Graph.Series["Исходные точки"].Points.Clear();
                 for (int i = 0; i < xValues.Length; i++)
                 {
-                    Graph.Series[0].Points.AddXY(xValues[i], yValues[i]);
+                    Graph.Series["Исходные точки"].Points.AddXY(xValues[i], yValues[i]);
                 }
-
-
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            Array.Clear(points, 0, points.Length);
         }
-   
 
+        private void coef_Click(object sender, EventArgs e)
+        {
+            // Очищаем только текущую серию, если она уже была построена
+            clear_series(Graph.Series["Многочлен 4 степени"]);
 
-   
+            try
+            {
+                string coefsText = coefs.Text;
+                coefsText = coefsText.Replace("-", " -");
+                coefsText = coefsText.Trim();
+                string seriesName = "Многочлен 4 степени";
+                double[] coefs_arr = coefsText.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s =>
+                    {
+                        if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out double result))
+                        {
+                            return result;
+                        }
+                        else
+                        {
+                            MessageBox.Show($"Ошибка: Не удалось преобразовать строку '{s}' в число.");
+                            return 0;
+                        }
+                    })
+                    .ToArray();
+                Polynomfourth polynomfourth = new Polynomfourth(coefs_arr);
+
+                double currentX = minX;
+                while (currentX <= maxX)
+                {
+                    double y = polynomfourth.Evaluate(currentX);
+                    Graph.Series[seriesName].Points.AddXY(currentX, y);
+                    currentX += scaleStep;
+                }
+                // Отображаем исходные точки
+                Graph.Series["Исходные точки"].Points.Clear();
+                for (int i = 0; i < xValues.Length; i++)
+                {
+                    Graph.Series["Исходные точки"].Points.AddXY(xValues[i], yValues[i]);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
+
         private void Squares_Click(object sender, EventArgs e)
         {
-            clear_chart(chart1, 3); 
+            try
+            {
+                int selectedDegree = int.Parse(Square.Text); // Получаем степень из text
+                string coefs = "";
+                string seriesName = "";
 
-         
-            if (chart1.Series.Count < 4)
-            {
-                MessageBox.Show("Необходимо создать хотя бы 4 серии на графике: Исходные данные, 1-я степень, 2-я степень, 3-я степень.");
-                return; 
-            }
-           
-
-
-            chart1.Series[0].Points.Clear();
-            for (int i = 0; i < xValues.Length; i++)
-            {
-                chart1.Series[0].Points.AddXY(xValues[i], yValues[i]);
-            }
-
-            int selectedDegree = 0;
-
-            if (Square.Text == "1")
-            {
-                selectedDegree = 1;
-            }
-            else if (Square.Text == "2")
-            {
-                selectedDegree = 2;
-            }
-            else if (Square.Text == "3")
-            {
-                selectedDegree = 3;
-            }
-            string coefs = "";
-            float[] coef = MinSquares.LeastSquaresPolynomial(xValues, yValues, selectedDegree);
-            for (int i = 0; i < coef.Length; i++)
-            {
-                coefs += coef[i].ToString() + "  ";
-            }
-            text.Text = coefs;
-            if (selectedDegree > 0)
-            {
-                chart1.Series[selectedDegree].Points.Clear();
-                for (int i = 0; i <= points_amount; i++)
+                try
                 {
-                    double x = minX + i * step;
-                    double y = MinSquares.EvaluatePolynomial(MinSquares.LeastSquaresPolynomial(xValues, yValues, selectedDegree), x);
-                    chart1.Series[selectedDegree].Points.AddXY(x, y);
+                    switch (selectedDegree)
+                    {
+                        case 1:
+                            seriesName = "Сглаживание 1 степени";
+                            break;
+                        case 2:
+                            seriesName = "Сглаживание 2 степени";
+                            break;
+                        case 3:
+                            seriesName = "Сглаживание 3 степени";
+                            break;
+                        default:
+                            throw new Exception("Введите число от 1 до 3!");
+                    }
                 }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                    return;
+                }
+
+                // Очищаем серию перед построением графика
+                clear_series(Graph.Series[seriesName]);
+
+                float[] coef = MinSquares.LeastSquaresPolynomial(xValues, yValues, selectedDegree);
+                for (int i = 0; i < coef.Length; i++)
+                {
+                    coefs += coef[i].ToString() + "  ";
+                }
+                text.Text = coefs;
+
+                // Вычисляем и добавляем точки для графика
+                double currentX = minX;
+                while (currentX <= maxX)
+                {
+                    double y = MinSquares.EvaluatePolynomial(coef, currentX);
+                    Graph.Series[seriesName].Points.AddXY(currentX, y);
+                    currentX += scaleStep;
+                }
+
+                // Отображаем исходные точки
+                Graph.Series["Исходные точки"].Points.Clear();
+                for (int i = 0; i < xValues.Length; i++)
+                {
+                    Graph.Series["Исходные точки"].Points.AddXY(xValues[i], yValues[i]);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
             }
         }
 
-        private void clear_chart(Chart chart, int numSeriesToClear)
+
+        // Кнопка для очистки графика
+        private void Clear_button_Click(object sender, EventArgs e)
         {
-            for (int i = 1; i <= numSeriesToClear; i++)
+            foreach (Series series in Graph.Series)
             {
-                if (chart.Series.Count > i)
+                if (series.Name != "Исходные точки") // Исключаем серию "Исходные точки"
                 {
-                    chart.Series[i].Points.Clear();
+                    series.Points.Clear();
                 }
             }
         }
 
+
+        // Метод для очистки конкретной серии
+        private void clear_series(Series series)
+        {
+            series.Points.Clear();
+        }
 
         private void Save_Button_Click(object sender, EventArgs e)
         {
+            Graph.Series["Исходные точки"].BorderWidth = 3; // Устанавливаем толщину линии для исходных точек
+
             try
             {
 
@@ -187,24 +259,28 @@ namespace Lab3VIchmat
                 minX -= rangeX * 0.05;
                 maxX += rangeX * 0.05;
 
-
-
-                step = (maxX - minX) / points_amount;
-
                 points = new PointF[points_amount + 1];
 
                 Graph.ChartAreas[0].AxisX.Minimum = minX;
                 Graph.ChartAreas[0].AxisX.Maximum = maxX;
                 Graph.ChartAreas[0].AxisX.LabelStyle.Angle = 0;
 
-                chart1.ChartAreas[0].AxisX.Minimum = minX;
-                chart1.ChartAreas[0].AxisX.Maximum = maxX;
-                chart1.ChartAreas[0].AxisX.LabelStyle.Angle = 0;
+
+                // Отображаем исходные точки
+                Graph.Series["Исходные точки"].Points.Clear();
+                for (int i = 0; i < xValues.Length; i++)
+                {
+                    Graph.Series["Исходные точки"].Points.AddXY(xValues[i], yValues[i]);
+                }
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+
+
+
     }
 }
